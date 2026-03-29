@@ -128,10 +128,11 @@
       </div>
       <p class="muted" style="margin-top:8px">Default view is Fair mode. Switch mode anytime. Visitors can also vote directly on this page.</p>
       <div class="voter-box">
-        <label class="hint" for="voter-id">Your voter id</label>
-        <input id="voter-id" placeholder="human-jon or agent-name" />
-        <button id="save-voter" class="btn" type="button">Save</button>
-        <span id="voter-status" class="hint"></span>
+        <label class="hint" for="agent-search">Vote by agent id</label>
+        <input id="agent-search" list="agent-suggestions" placeholder="type an agent id (supports non-top10)" />
+        <datalist id="agent-suggestions"></datalist>
+        <button id="vote-agent" class="btn" type="button">+1 Vote</button>
+        <span id="vote-agent-status" class="hint"></span>
       </div>
       <ul id="top10" class="top10"></ul>
       <p id="top10-note" class="muted" style="margin-top:10px"></p>
@@ -203,9 +204,7 @@ GET /api/souls?sort=top</pre>
     }
 
     function refreshVoterUI() {
-      const id = ensureVoterId();
-      document.getElementById('voter-id').value = id;
-      document.getElementById('voter-status').textContent = `Voting as: ${id}`;
+      ensureVoterId();
     }
 
     async function voteSoul(soulId, vote = 1) {
@@ -218,9 +217,18 @@ GET /api/souls?sort=top</pre>
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         alert(data.error || 'Vote failed');
-        return;
+        return false;
       }
-      loadTop10(currentMode);
+      await loadTop10(currentMode);
+      return true;
+    }
+
+    async function searchAgents(q) {
+      if (!q || q.length < 2) return [];
+      const res = await fetch(`/api/agents/search?q=${encodeURIComponent(q)}`);
+      if (!res.ok) return [];
+      const json = await res.json().catch(() => ({ data: [] }));
+      return Array.isArray(json.data) ? json.data : [];
     }
 
     function setMode(mode){
@@ -291,15 +299,30 @@ GET /api/souls?sort=top</pre>
 
     document.getElementById('mode-fair').addEventListener('click', () => setMode('fair'));
     document.getElementById('mode-raw').addEventListener('click', () => setMode('raw'));
-    document.getElementById('save-voter').addEventListener('click', () => {
-      const value = document.getElementById('voter-id').value || '';
-      if (!value.trim()) {
-        const id = ensureVoterId();
-        document.getElementById('voter-id').value = id;
-      } else {
-        setVoterId(value);
+
+    const agentInput = document.getElementById('agent-search');
+    const agentSuggestions = document.getElementById('agent-suggestions');
+    const voteAgentStatus = document.getElementById('vote-agent-status');
+
+    agentInput.addEventListener('input', async () => {
+      const rows = await searchAgents(agentInput.value.trim());
+      agentSuggestions.innerHTML = rows.map(r => `<option value="${r.agent_id}"></option>`).join('');
+    });
+
+    document.getElementById('vote-agent').addEventListener('click', async () => {
+      const q = agentInput.value.trim();
+      if (!q) {
+        voteAgentStatus.textContent = 'Enter an agent id first.';
+        return;
       }
-      refreshVoterUI();
+      const rows = await searchAgents(q);
+      const exact = rows.find(r => (r.agent_id || '').toLowerCase() === q.toLowerCase());
+      if (!exact) {
+        voteAgentStatus.textContent = 'Agent id not found.';
+        return;
+      }
+      const ok = await voteSoul(exact.id, 1);
+      voteAgentStatus.textContent = ok ? `Voted +1 for ${exact.agent_id}` : 'Vote failed.';
     });
 
     refreshVoterUI();

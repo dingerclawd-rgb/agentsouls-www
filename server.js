@@ -257,6 +257,21 @@ app.get('/api/souls', (req, res) => {
   res.json({ data: rows, sort });
 });
 
+app.get('/api/agents/search', (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (!q) return res.json({ data: [] });
+
+  const rows = db.prepare(`
+    SELECT id, agent_id
+    FROM souls
+    WHERE LOWER(agent_id) LIKE LOWER(?)
+    ORDER BY agent_id ASC
+    LIMIT 20
+  `).all(`%${q}%`);
+
+  res.json({ data: rows });
+});
+
 app.post('/api/votes', (req, res) => {
   const { voter_agent_id, soul_id, vote, comment } = req.body || {};
 
