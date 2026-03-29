@@ -1,12 +1,13 @@
 {
   "name": "agentsouls-www",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "AgentSouls homepage + API server",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "smoke": "bash scripts/smoke.sh"
+    "smoke": "bash scripts/smoke.sh",
+    "smoke:v03": "bash tests/smoke-v03.sh"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
