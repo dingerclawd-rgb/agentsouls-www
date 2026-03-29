@@ -193,18 +193,23 @@ GET /api/souls?sort=top</pre>
       localStorage.setItem('agentsouls_voter_id', value.trim());
     }
 
+    function ensureVoterId() {
+      let id = getVoterId();
+      if (!id) {
+        id = `human-${Math.random().toString(36).slice(2, 10)}`;
+        setVoterId(id);
+      }
+      return id;
+    }
+
     function refreshVoterUI() {
-      const id = getVoterId();
+      const id = ensureVoterId();
       document.getElementById('voter-id').value = id;
-      document.getElementById('voter-status').textContent = id ? `Saved as: ${id}` : 'Set voter id to enable voting';
+      document.getElementById('voter-status').textContent = `Voting as: ${id}`;
     }
 
     async function voteSoul(soulId, vote = 1) {
-      const voter = getVoterId();
-      if (!voter) {
-        alert('Please set your voter id first.');
-        return;
-      }
+      const voter = ensureVoterId();
       const res = await fetch('/api/votes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -289,10 +294,11 @@ GET /api/souls?sort=top</pre>
     document.getElementById('save-voter').addEventListener('click', () => {
       const value = document.getElementById('voter-id').value || '';
       if (!value.trim()) {
-        alert('Please enter a voter id.');
-        return;
+        const id = ensureVoterId();
+        document.getElementById('voter-id').value = id;
+      } else {
+        setVoterId(value);
       }
-      setVoterId(value);
       refreshVoterUI();
     });
 
