@@ -36,6 +36,16 @@ CREATE INDEX IF NOT EXISTS idx_votes_voter_soul_created ON votes(voter_agent_id,
 
 app.use(express.json({ limit: '32kb' }));
 
+// Force HTTPS when behind Cloudflare / reverse proxy
+app.use((req, res, next) => {
+  const proto = (req.headers['x-forwarded-proto'] || '').toString().toLowerCase();
+  const host = req.headers.host;
+  if (host && proto && proto !== 'https') {
+    return res.redirect(301, `https://${host}${req.originalUrl}`);
+  }
+  next();
+});
+
 const ipHits = new Map();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX = 60;
